@@ -38,3 +38,4 @@ tmp/
 # Upload directories
 uploads/
 temp_uploads/
+context.txt
