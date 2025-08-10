@@ -1,8 +1,6 @@
 services:
   backend:
     build: ./backend
-    ports:
-      - "8000:8000"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
@@ -20,8 +18,6 @@ services:
 
   frontend:
     build: ./frontend
-    ports:
-      - "5173:80"
     labels:
       - traefik.http.middlewares.frontend-auth.basicauth.users=${BASIC_AUTH_CREDENTIALS}
       - traefik.http.routers.frontend.middlewares=frontend-auth
