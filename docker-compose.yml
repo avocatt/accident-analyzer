@@ -8,6 +8,9 @@ services:
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
     volumes:
       - ./backend:/app
+    labels:
+      - traefik.http.middlewares.backend-auth.basicauth.users=${BASIC_AUTH_CREDENTIALS}
+      - traefik.http.routers.backend.middlewares=backend-auth
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -19,6 +22,9 @@ services:
     build: ./frontend
     ports:
       - "5173:80"
+    labels:
+      - traefik.http.middlewares.frontend-auth.basicauth.users=${BASIC_AUTH_CREDENTIALS}
+      - traefik.http.routers.frontend.middlewares=frontend-auth
     depends_on:
       - backend
     restart: unless-stopped
