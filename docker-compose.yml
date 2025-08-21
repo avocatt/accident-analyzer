@@ -4,8 +4,6 @@ services:
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
-    volumes:
-      - ./backend:/app
     labels:
       - traefik.http.middlewares.backend-auth.basicauth.users=${BASIC_AUTH_CREDENTIALS}
       - traefik.http.routers.backend.middlewares=backend-auth
