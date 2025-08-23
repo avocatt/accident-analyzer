@@ -5,8 +5,12 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
     labels:
+      - traefik.enable=true
+      - traefik.http.routers.accident-analyzer-backend.rule=Host(`${BACKEND_DOMAIN:-localhost}`) && PathPrefix(`/api`)
+      - traefik.http.routers.accident-analyzer-backend.service=accident-analyzer-backend
+      - traefik.http.services.accident-analyzer-backend.loadbalancer.server.port=8000
       - traefik.http.middlewares.accident-backend-auth.basicauth.users=${BASIC_AUTH_CREDENTIALS}
-      - traefik.http.routers.accident-backend.middlewares=accident-backend-auth
+      - traefik.http.routers.accident-analyzer-backend.middlewares=accident-backend-auth
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -17,8 +21,12 @@ services:
   accident-analyzer-frontend:
     build: ./frontend
     labels:
+      - traefik.enable=true
+      - traefik.http.routers.accident-analyzer-frontend.rule=Host(`${FRONTEND_DOMAIN:-localhost}`)
+      - traefik.http.routers.accident-analyzer-frontend.service=accident-analyzer-frontend
+      - traefik.http.services.accident-analyzer-frontend.loadbalancer.server.port=80
       - traefik.http.middlewares.accident-frontend-auth.basicauth.users=${BASIC_AUTH_CREDENTIALS}
-      - traefik.http.routers.accident-frontend.middlewares=accident-frontend-auth
+      - traefik.http.routers.accident-analyzer-frontend.middlewares=accident-frontend-auth
     depends_on:
       - accident-analyzer-backend
     restart: unless-stopped
