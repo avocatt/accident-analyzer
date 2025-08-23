@@ -1,5 +1,5 @@
 services:
-  backend:
+  accident-analyzer-backend:
     build: ./backend
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
@@ -14,13 +14,13 @@ services:
       timeout: 10s
       retries: 3
 
-  frontend:
+  accident-analyzer-frontend:
     build: ./frontend
     labels:
       - traefik.http.middlewares.frontend-auth.basicauth.users=${BASIC_AUTH_CREDENTIALS}
       - traefik.http.routers.frontend.middlewares=frontend-auth
     depends_on:
-      - backend
+      - accident-analyzer-backend
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80"]

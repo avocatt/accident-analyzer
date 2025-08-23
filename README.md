@@ -15,7 +15,7 @@ LexIntake is a web application that automates the analysis of Turkish traffic ac
 
 ### Backend
 - FastAPI (Python 3.11)
-- OpenAI GPT-4o API
+- OpenAI GPT-5 API
 - PyMuPDF for PDF processing
 - Pillow for image handling
 - ReportLab for PDF generation
