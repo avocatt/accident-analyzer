@@ -12,6 +12,19 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.middlewares.gzip.compress=true"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.routers.https-dog0-backend.entryPoints=https"
+      - "traefik.http.routers.https-dog0-backend.rule=Host(`lexintake-api.emreterzi.com`)"
+      - "traefik.http.routers.https-dog0-backend.tls=true"
+      - "traefik.http.routers.https-dog0-backend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.https-dog0-backend.middlewares=gzip"
+      - "traefik.http.services.https-dog0-backend.loadbalancer.server.port=8000"
+      - "traefik.http.routers.http-dog0-backend.entryPoints=http"
+      - "traefik.http.routers.http-dog0-backend.rule=Host(`lexintake-api.emreterzi.com`)"
+      - "traefik.http.routers.http-dog0-backend.middlewares=redirect-to-https"
 
   accident-analyzer-frontend:
     build: ./frontend
@@ -27,3 +40,15 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.middlewares.gzip.compress=true"
+      - "traefik.http.routers.https-dog0-frontend.entryPoints=https"
+      - "traefik.http.routers.https-dog0-frontend.rule=Host(`lexintake.emreterzi.com`)"
+      - "traefik.http.routers.https-dog0-frontend.tls=true"
+      - "traefik.http.routers.https-dog0-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.https-dog0-frontend.middlewares=gzip"
+      - "traefik.http.services.https-dog0-frontend.loadbalancer.server.port=80"
+      - "traefik.http.routers.http-dog0-frontend.entryPoints=http"
+      - "traefik.http.routers.http-dog0-frontend.rule=Host(`lexintake.emreterzi.com`)"
+      - "traefik.http.routers.http-dog0-frontend.middlewares=redirect-to-https"
