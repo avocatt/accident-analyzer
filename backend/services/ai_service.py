@@ -132,62 +132,56 @@ class AIService:
         max_retries: int = 3
     ) -> AnalysisResult:
         """
-        Call OpenAI GPT-5 Responses API with structured output
+        Call GPT-5 Responses API with guaranteed structured output
         """
         for attempt in range(max_retries):
             try:
-                # Use the GPT-5 Responses API
-                response = self.client.responses.create(
+                # Use GPT-5 Responses API with structured outputs
+                response = self.client.responses.parse(
                     model=self.model,
                     input=input_messages,
                     reasoning={"effort": "high"},  # High reasoning for legal analysis
-                    text={"verbosity": "medium"}   # Medium verbosity for detailed analysis
+                    text={"verbosity": "medium"},  # Medium verbosity for detailed analysis
+                    text_format=AnalysisResult     # Pydantic model for guaranteed structure
                 )
                 
-                # Parse the response from GPT-5 Responses API
-                if hasattr(response, 'output_text') and response.output_text:
-                    try:
-                        output_json = json.loads(response.output_text)
-                        # Create AnalysisResult from the JSON response
-                        analysis_result = AnalysisResult(**output_json)
-                        
-                        # Set session ID and timestamp
-                        analysis_result.session_id = additional_context.get("session_id", str(datetime.now().timestamp()))
-                        analysis_result.analysis_timestamp = datetime.utcnow()
-                        
-                        # Set default confidence if not provided
-                        if not hasattr(analysis_result, 'extraction_confidence') or not analysis_result.extraction_confidence:
-                            analysis_result.extraction_confidence = 0.95
-                        
-                        return analysis_result
-                    except json.JSONDecodeError:
-                        # If JSON parsing fails, raise an error with the actual response
-                        raise Exception(f"Failed to parse GPT-5 response as JSON. Response: {response.output_text[:500]}")
+                # Get the parsed structured output directly
+                if hasattr(response, 'output_parsed') and response.output_parsed:
+                    analysis_result = response.output_parsed
+                    
+                    # Set session ID and timestamp
+                    analysis_result.session_id = additional_context.get("session_id", str(datetime.now().timestamp()))
+                    analysis_result.analysis_timestamp = datetime.utcnow()
+                    
+                    # Set default confidence if not provided
+                    if not hasattr(analysis_result, 'extraction_confidence') or not analysis_result.extraction_confidence:
+                        analysis_result.extraction_confidence = 0.95
+                    
+                    return analysis_result
                 
-                # If no output_text found, check alternative response format
-                elif hasattr(response, 'output') and response.output:
-                    # Handle alternative response format
+                # Check for refusal
+                if hasattr(response, 'output') and response.output:
                     for output_item in response.output:
                         if hasattr(output_item, 'content'):
                             for content_item in output_item.content:
-                                if hasattr(content_item, 'text'):
-                                    try:
-                                        output_json = json.loads(content_item.text)
-                                        analysis_result = AnalysisResult(**output_json)
-                                        
-                                        # Set session ID and timestamp
-                                        analysis_result.session_id = additional_context.get("session_id", str(datetime.now().timestamp()))
-                                        analysis_result.analysis_timestamp = datetime.utcnow()
-                                        
-                                        if not hasattr(analysis_result, 'extraction_confidence') or not analysis_result.extraction_confidence:
-                                            analysis_result.extraction_confidence = 0.95
-                                        
-                                        return analysis_result
-                                    except json.JSONDecodeError:
-                                        continue
+                                if hasattr(content_item, 'type') and content_item.type == 'refusal':
+                                    # Model refused to respond - create a proper response indicating this
+                                    return AnalysisResult(
+                                        session_id=additional_context.get("session_id", str(datetime.now().timestamp())),
+                                        analysis_timestamp=datetime.utcnow(),
+                                        case_summary=f"Analysis could not be completed: {content_item.refusal}",
+                                        party_a=PartyInfo(name="Unable to extract", vehicle_plate="N/A", vehicle_type="N/A"),
+                                        party_b=PartyInfo(name="Unable to extract", vehicle_plate="N/A", vehicle_type="N/A"),
+                                        accident_details=AccidentDetails(date="Unknown", time="Unknown", location="Unknown"),
+                                        form_checkboxes=FormCheckboxes(),
+                                        fault_assessment=FaultAssessment(),
+                                        extraction_confidence=0.0,
+                                        missing_information=["Valid Turkish traffic accident report required"],
+                                        data_inconsistencies=["Model refusal or invalid input provided"]
+                                    )
                 
-                # If no parseable response found, raise an error
-                raise Exception(f"No valid structured output found in GPT-5 response. Response format: {type(response)}")
+                # If no valid structured output found, raise an error
+                raise Exception("GPT-5 did not return valid structured output")
                 
             except Exception as e:
                 print(f"GPT-5 API call attempt {attempt + 1} failed: {str(e)}")
