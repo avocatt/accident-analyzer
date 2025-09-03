@@ -47,7 +47,10 @@ doc_processor = DocumentProcessor()
 briefing_generator = BriefingGenerator()
 
 # Ensure temp directory exists
-TEMP_DIR = "/app/temp_uploads"
+TEMP_DIR = os.getenv("TEMP_DIR", "/app/temp_uploads")
+# For local development, use a local temp directory
+if not os.path.exists("/app"):
+    TEMP_DIR = os.path.join(os.getcwd(), "temp_uploads")
 os.makedirs(TEMP_DIR, exist_ok=True)
 
 

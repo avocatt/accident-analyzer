@@ -1,9 +1,9 @@
 import os
 import json
+import asyncio
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 from openai import OpenAI
-import asyncio
 
 from models.analysis_result import (
     AnalysisResult, PartyInfo, AccidentDetails, 
@@ -13,7 +13,7 @@ from models.analysis_result import (
 
 class AIService:
     """
-    Service for interacting with OpenAI GPT-5 for document analysis using the new Responses API
+    Service for interacting with OpenAI GPT-5 for document analysis using the Responses API
     """
     
     def __init__(self):
@@ -22,7 +22,7 @@ class AIService:
             raise ValueError("OPENAI_API_KEY environment variable is required")
         
         self.client = OpenAI(api_key=self.api_key)
-        self.model = "gpt-5"  # Using GPT-5 flagship model
+        self.model = "gpt-5"  # Using GPT-5 with Responses API
         
         # Load master prompt
         prompt_path = os.path.join(os.path.dirname(__file__), "../prompts/master_prompt.txt")
@@ -57,13 +57,14 @@ class AIService:
         additional_context: Optional[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
         """
-        Prepare input for OpenAI Responses API call with new format
+        Prepare input for GPT-5 Responses API call
         """
+        # GPT-5 Responses API uses a different format - array of message objects
         input_messages = []
         
-        # Add system message with master prompt
+        # Add developer message with master prompt (system instructions)
         input_messages.append({
-            "role": "system",
+            "role": "developer",
             "content": self.master_prompt
         })
         
@@ -79,7 +80,7 @@ class AIService:
                 context_text += f"Notes: {additional_context['additional_notes']}\n"
             user_content.append({"type": "input_text", "text": context_text})
         
-        # Add main report content with new input format
+        # Add main report content
         if report_content["type"] == "pdf":
             # Add extracted text if available
             if report_content.get("text_content"):
@@ -88,7 +89,7 @@ class AIService:
                     "text": f"Extracted text from PDF:\n{report_content['text_content'][:3000]}"
                 })
             
-            # Add page images with new format
+            # Add page images
             for page_data in report_content.get("page_images", [])[:2]:  # Limit to first 2 pages
                 user_content.append({
                     "type": "input_image",
@@ -100,16 +101,22 @@ class AIService:
                 "image_url": f"data:{report_content['mime_type']};base64,{report_content['base64']}"
             })
         
-        # Add photo contents with new format
+        # Add additional photos
         for idx, photo in enumerate(photo_contents[:5]):  # Limit to 5 photos
             user_content.append({
                 "type": "input_text",
-                "text": f"\nPhoto {idx + 1}:"
+                "text": f"Photo {idx + 1}:"
             })
             user_content.append({
                 "type": "input_image",
                 "image_url": f"data:{photo['mime_type']};base64,{photo['base64']}"
             })
+        
+        # Add the main analysis request
+        user_content.append({
+            "type": "input_text",
+            "text": "Please analyze this Turkish traffic accident report and provide a structured analysis in the required format."
+        })
         
         input_messages.append({
             "role": "user",
@@ -125,70 +132,66 @@ class AIService:
         max_retries: int = 3
     ) -> AnalysisResult:
         """
-        Call OpenAI Responses API with Pydantic structured output
+        Call OpenAI GPT-5 Responses API with structured output
         """
         for attempt in range(max_retries):
             try:
-                # Use the new parse method with Pydantic model directly
-                response = self.client.beta.chat.completions.parse(
+                # Use the GPT-5 Responses API
+                response = self.client.responses.create(
                     model=self.model,
-                    messages=input_messages,
-                    response_format=AnalysisResult,
-                    reasoning_effort="high",  # Maximum reasoning for legal analysis
-                    temperature=0.1,  # Low temperature for consistent extraction
-                    max_completion_tokens=8000  # Increased for high verbosity
+                    input=input_messages,
+                    reasoning={"effort": "high"},  # High reasoning for legal analysis
+                    text={"verbosity": "medium"}   # Medium verbosity for detailed analysis
                 )
                 
-                # Check for refusal
-                if response.choices[0].message.refusal:
-                    raise Exception(f"Model refused: {response.choices[0].message.refusal}")
+                # Parse the response from GPT-5 Responses API
+                if hasattr(response, 'output_text') and response.output_text:
+                    try:
+                        output_json = json.loads(response.output_text)
+                        # Create AnalysisResult from the JSON response
+                        analysis_result = AnalysisResult(**output_json)
+                        
+                        # Set session ID and timestamp
+                        analysis_result.session_id = additional_context.get("session_id", str(datetime.now().timestamp()))
+                        analysis_result.analysis_timestamp = datetime.utcnow()
+                        
+                        # Set default confidence if not provided
+                        if not hasattr(analysis_result, 'extraction_confidence') or not analysis_result.extraction_confidence:
+                            analysis_result.extraction_confidence = 0.95
+                        
+                        return analysis_result
+                    except json.JSONDecodeError:
+                        # If JSON parsing fails, raise an error with the actual response
+                        raise Exception(f"Failed to parse GPT-5 response as JSON. Response: {response.output_text[:500]}")
                 
-                # Get parsed result directly
-                analysis_result = response.choices[0].message.parsed
+                # If no output_text found, check alternative response format
+                elif hasattr(response, 'output') and response.output:
+                    # Handle alternative response format
+                    for output_item in response.output:
+                        if hasattr(output_item, 'content'):
+                            for content_item in output_item.content:
+                                if hasattr(content_item, 'text'):
+                                    try:
+                                        output_json = json.loads(content_item.text)
+                                        analysis_result = AnalysisResult(**output_json)
+                                        
+                                        # Set session ID and timestamp
+                                        analysis_result.session_id = additional_context.get("session_id", str(datetime.now().timestamp()))
+                                        analysis_result.analysis_timestamp = datetime.utcnow()
+                                        
+                                        if not hasattr(analysis_result, 'extraction_confidence') or not analysis_result.extraction_confidence:
+                                            analysis_result.extraction_confidence = 0.95
+                                        
+                                        return analysis_result
+                                    except json.JSONDecodeError:
+                                        continue
                 
-                # Set session ID and timestamp
-                if analysis_result:
-                    analysis_result.session_id = additional_context.get("session_id", str(datetime.now().timestamp()))
-                    analysis_result.analysis_timestamp = datetime.utcnow()
-                    
-                    # Set default confidence if not provided
-                    if not analysis_result.extraction_confidence:
-                        analysis_result.extraction_confidence = 0.95
-                
-                return analysis_result
+                # If no parseable response found, raise an error
+                raise Exception(f"No valid structured output found in GPT-5 response. Response format: {type(response)}")
                 
             except Exception as e:
+                print(f"GPT-5 API call attempt {attempt + 1} failed: {str(e)}")
                 if attempt == max_retries - 1:
-                    # On final attempt, return a fallback result
-                    return self._create_fallback_result(str(e), additional_context)
+                    raise Exception(f"GPT-5 API failed after {max_retries} attempts: {str(e)}")
                 await asyncio.sleep(2 ** attempt)  # Exponential backoff
     
-    def _create_fallback_result(self, error_message: str, additional_context: Optional[Dict[str, Any]] = None) -> AnalysisResult:
-        """
-        Create a fallback result when API call fails
-        """
-        return AnalysisResult(
-            session_id=additional_context.get("session_id", str(datetime.now().timestamp())),
-            analysis_timestamp=datetime.utcnow(),
-            case_summary=f"Analysis failed: {error_message}",
-            party_a=PartyInfo(
-                name="Error - Unable to extract",
-                vehicle_plate="Unknown",
-                vehicle_type="Unknown"
-            ),
-            party_b=PartyInfo(
-                name="Error - Unable to extract",
-                vehicle_plate="Unknown",
-                vehicle_type="Unknown"
-            ),
-            accident_details=AccidentDetails(
-                date="Unknown",
-                time="Unknown",
-                location="Unknown"
-            ),
-            form_checkboxes=FormCheckboxes(),
-            fault_assessment=FaultAssessment(),
-            extraction_confidence=0.0,
-            missing_information=["Complete analysis failed"],
-            data_inconsistencies=[error_message]
-        )
