@@ -27,9 +27,15 @@ app = FastAPI(
 
 # Configure CORS
 frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+allowed_origins = [
+    frontend_url,
+    "http://localhost:5173",  # Local development
+    "https://lexintake.emreterzi.com",  # Production frontend
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[frontend_url],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

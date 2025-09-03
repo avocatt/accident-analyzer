@@ -12,6 +12,10 @@ RUN npm install
 # Copy source code
 COPY . .
 
+# Accept build-time environment variable
+ARG VITE_BACKEND_URL
+ENV VITE_BACKEND_URL=$VITE_BACKEND_URL
+
 # Build the application
 RUN npm run build
 

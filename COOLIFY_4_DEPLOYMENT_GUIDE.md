@@ -281,16 +281,41 @@ Coolify automatically provides these environment variables:
 - Replace hyphens with underscores
 - Example: `my-backend` becomes `SERVICE_FQDN_MY_BACKEND`
 
+### ⚠️ Magic Variable Protocol Gotcha
+
+**CRITICAL BUG**: Coolify's magic variables (SERVICE_FQDN_*, SERVICE_URL_*) **do NOT include the protocol** (https://):
+
+```yaml
+# ❌ BROKEN - Results in: myapp.com/api (missing https://)  
+API_URL=${SERVICE_FQDN_BACKEND}/api
+VITE_API_BASE_URL=${SERVICE_FQDN_BACKEND}/api
+
+# ✅ FIXED - Use explicit environment variables instead
+API_URL=${API_BASE_URL}              # Set API_BASE_URL=https://api.myapp.com
+VITE_API_BASE_URL=${VITE_API_BASE_URL}  # Set VITE_API_BASE_URL=https://api.myapp.com/api
+```
+
+**Root cause**: Magic variables return domain only (e.g., `api.mydomain.com`), not full URLs, causing malformed API calls that result in 405 Method Not Allowed errors.
+
+**Real-world example from Vekil project**:
+- Environment: `SERVICE_FQDN_VEKIL_BACKEND=vekil-api.emreterzi.com` (no protocol)
+- Docker build: `VITE_API_BASE_URL=${SERVICE_FQDN_VEKIL_BACKEND}/api`
+- Result: `VITE_API_BASE_URL=vekil-api.emreterzi.com/api` (broken)
+- Frontend tried: `https://vekil.emreterzi.com/auth/vekil-api.emreterzi.com/api/auth/login/` (404/405)
+- Fix: Use `VITE_API_BASE_URL=${VITE_API_BASE_URL}` with explicit `VITE_API_BASE_URL=https://vekil-api.emreterzi.com/api`
+
 ### Usage Examples:
 ```yaml
 environment:
   # Instead of hardcoded URLs:
   - API_URL=https://api.mydomain.com  # ❌ DON'T
   
-  # Use magic variables:
-  - API_URL=${SERVICE_FQDN_BACKEND}   # ✅ DO
-  - FRONTEND_URL=${SERVICE_FQDN_FRONTEND}
+  # Magic variables (SAFE for internal communication):
+  - FRONTEND_URL=${SERVICE_FQDN_FRONTEND}  # ✅ OK for server-side
   - DATABASE_URL=postgresql://user:pass@postgres:5432/db
+  
+  # Frontend build args (DANGEROUS with magic variables):
+  - VITE_API_BASE_URL=${VITE_API_BASE_URL}  # ✅ Use explicit env var
 ```
 
 ## Networking & Domains

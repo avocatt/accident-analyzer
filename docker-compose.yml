@@ -5,7 +5,7 @@ services:
       - "8000"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - FRONTEND_URL=${SERVICE_FQDN_ACCIDENT_ANALYZER_FRONTEND}
+      - FRONTEND_URL=${SERVICE_URL_ACCIDENT_ANALYZER_FRONTEND}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -27,11 +27,12 @@ services:
       - "traefik.http.routers.http-dog0-backend.middlewares=redirect-to-https"
 
   accident-analyzer-frontend:
-    build: ./frontend
+    build: 
+      context: ./frontend
+      args:
+        VITE_BACKEND_URL: ${SERVICE_URL_ACCIDENT_ANALYZER_BACKEND}
     expose:
       - "80"
-    environment:
-      - API_URL=${SERVICE_FQDN_ACCIDENT_ANALYZER_BACKEND}
     depends_on:
       - accident-analyzer-backend
     restart: unless-stopped
