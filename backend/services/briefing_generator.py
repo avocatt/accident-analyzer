@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 from io import BytesIO
 import base64
+from string import Template
 
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -20,7 +21,7 @@ class BriefingGenerator:
     """
     
     def __init__(self):
-        self.html_template = self._load_html_template()
+        self.html_template = Template(self._load_html_template())
     
     def _load_html_template(self) -> str:
         """
@@ -163,10 +164,10 @@ class BriefingGenerator:
                 It does not constitute legal advice. Using this service does not create an attorney-client relationship.
             </div>
             
-            {content}
+            ${content}
             
             <div class="timestamp">
-                Generated: {timestamp}
+                Generated: ${timestamp}
             </div>
         </body>
         </html>
@@ -343,7 +344,7 @@ class BriefingGenerator:
         content = "\n".join(content_sections)
         timestamp = analysis.analysis_timestamp.strftime("%Y-%m-%d %H:%M:%S UTC")
         
-        return self.html_template.format(content=content, timestamp=timestamp)
+        return self.html_template.safe_substitute(content=content, timestamp=timestamp)
     
     def generate_pdf_briefing(self, analysis: AnalysisResult) -> bytes:
         """
