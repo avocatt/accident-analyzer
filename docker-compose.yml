@@ -36,8 +36,6 @@ services:
   accident-analyzer-frontend:
     build: 
       context: ./frontend
-      args:
-        VITE_BACKEND_URL: ${SERVICE_URL_ACCIDENT_ANALYZER_BACKEND}
     expose:
       - "80"
     depends_on:
