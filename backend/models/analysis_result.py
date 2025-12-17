@@ -87,4 +87,4 @@ class AnalysisResult(BaseModel):
     data_inconsistencies: List[str] = []
     
     # Raw AI response (for debugging)
-    raw_ai_response: Optional[Dict[Any, Any]] = None
+    raw_ai_response: Optional[str] = None
