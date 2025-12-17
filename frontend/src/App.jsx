@@ -38,7 +38,7 @@ function App() {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        timeout: 120000, // 2 minute timeout
+        timeout: 300000, // allow up to 5 minutes for analysis
       });
 
       setAnalysisResult(response.data);
