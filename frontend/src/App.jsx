@@ -6,7 +6,23 @@ import AnalysisResults from './components/AnalysisResults';
 import LoadingSpinner from './components/LoadingSpinner';
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+const resolveApiBaseUrl = () => {
+  if (import.meta.env.VITE_BACKEND_URL) {
+    return import.meta.env.VITE_BACKEND_URL;
+  }
+
+  if (import.meta.env.DEV) {
+    return 'http://localhost:8000';
+  }
+
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+
+  return '';
+};
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 function App() {
   const [currentStep, setCurrentStep] = useState('upload'); // upload, analyzing, results
