@@ -1,6 +1,7 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 from typing import List, Optional
 import os
@@ -133,12 +134,12 @@ async def analyze_documents(
         response = {
             "session_id": session_id,
             "status": "success",
-            "analysis": analysis_result.dict(),
+            "analysis": jsonable_encoder(analysis_result),
             "briefing_html": briefing_html,
             "briefing_pdf_available": True,
             "timestamp": datetime.utcnow().isoformat()
         }
-        
+
         return JSONResponse(content=response)
         
     except Exception as e:
