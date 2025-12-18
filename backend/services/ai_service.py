@@ -1,14 +1,18 @@
 import os
-import json
 import asyncio
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 from openai import OpenAI
 
 from models.analysis_result import (
-    AnalysisResult, PartyInfo, AccidentDetails, 
-    FaultAssessment, FormCheckboxes, PhotoAnalysis
+    AnalysisResult,
+    PartyInfo,
+    AccidentDetails,
+    FaultAssessment,
+    FormCheckboxes,
+    PhotoAnalysis,
 )
+import json
 
 
 class AIService:
@@ -17,12 +21,26 @@ class AIService:
     """
     
     def __init__(self):
+        explicit_mock = os.getenv("USE_MOCK_OPENAI", "false").lower() == "true"
         self.api_key = os.getenv("OPENAI_API_KEY")
-        if not self.api_key:
-            raise ValueError("OPENAI_API_KEY environment variable is required")
-        
-        self.client = OpenAI(api_key=self.api_key)
-        self.model = "gpt-5"  # Using GPT-5 with Responses API
+        if not self.api_key and not explicit_mock:
+            print("[AIService] OPENAI_API_KEY missing; defaulting to mock mode")
+        self.use_mock = explicit_mock or not self.api_key
+
+        self.client = None if self.use_mock else OpenAI(api_key=self.api_key)
+        self.model = os.getenv("OPENAI_MODEL", "gpt-5")
+        self.mock_fixture_path = os.getenv(
+            "MOCK_ANALYSIS_FIXTURE",
+            os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__),
+                    "..",
+                    "tests",
+                    "fixtures",
+                    "mock_analysis.json",
+                )
+            ),
+        )
         
         # Load master prompt
         prompt_path = os.path.join(os.path.dirname(__file__), "../prompts/master_prompt.txt")
@@ -39,12 +57,15 @@ class AIService:
         Analyze accident report and photos using GPT-5 with Responses API
         """
         try:
+            if self.use_mock:
+                return await self._mock_analysis(additional_context)
+
             # Prepare input for API call
             input_content = self._prepare_input(report_content, photo_contents, additional_context)
-            
+
             # Make API call with Pydantic model for structured output
             response = await self._call_openai_with_structured_output(input_content, additional_context)
-            
+
             return response
             
         except Exception as e:
@@ -188,4 +209,28 @@ class AIService:
                 if attempt == max_retries - 1:
                     raise Exception(f"GPT-5 API failed after {max_retries} attempts: {str(e)}")
                 await asyncio.sleep(2 ** attempt)  # Exponential backoff
+
+    async def _mock_analysis(self, additional_context: Optional[Dict[str, Any]] = None) -> AnalysisResult:
+        """
+        Return a deterministic AnalysisResult for testing without hitting OpenAI.
+        """
+        try:
+            with open(self.mock_fixture_path, "r", encoding="utf-8") as fixture_file:
+                mock_payload = json.load(fixture_file)
+        except FileNotFoundError as exc:
+            raise Exception(
+                f"Mock fixture not found at {self.mock_fixture_path}. Set MOCK_ANALYSIS_FIXTURE or include the file."
+            ) from exc
+
+        session_id = (
+            additional_context.get("session_id")
+            if additional_context and additional_context.get("session_id")
+            else mock_payload.get("session_id")
+            or str(datetime.utcnow().timestamp())
+        )
+
+        mock_payload["session_id"] = session_id
+        mock_payload["analysis_timestamp"] = datetime.utcnow().isoformat()
+
+        return AnalysisResult(**mock_payload)
     

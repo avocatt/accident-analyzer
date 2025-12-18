@@ -1,0 +1,50 @@
+{
+  "session_id": "mock-session",
+  "analysis_timestamp": "2025-12-17T20:00:00Z",
+  "case_summary": "Mock summary describing the accident between Party A and Party B on Büyükdere Caddesi.",
+  "party_a": {
+    "name": "Serkan Yıldız",
+    "vehicle_plate": "TRM-25-884211",
+    "vehicle_type": "SUV"
+  },
+  "party_b": {
+    "name": "Ayşe Deniz Karaca",
+    "vehicle_plate": "TRM-25-884219",
+    "vehicle_type": "Sedan"
+  },
+  "accident_details": {
+    "date": "2025-11-12",
+    "time": "18:42",
+    "location": "Levent Köprüsü Yanı",
+    "weather_conditions": "Rainy"
+  },
+  "form_checkboxes": {
+    "section_12_selections": [9, 10],
+    "section_13_selections": [5, 8],
+    "section_14_initial_impact": "Rear",
+    "section_15_visible_damages": ["Rear bumper"],
+    "section_16_observations": ["Wet road"]
+  },
+  "fault_assessment": {
+    "party_a_fault_percentage": 30,
+    "party_b_fault_percentage": 70,
+    "preliminary_fault_party": "Party B",
+    "fault_indicators": ["Unsafe lane change"],
+    "contested_points": ["Signal usage"]
+  },
+  "photo_analyses": [
+    {
+      "photo_id": 1,
+      "description": "Rear damage on vehicle B",
+      "relevant_damages": ["Rear bumper dent"],
+      "consistency_with_report": true
+    }
+  ],
+  "witness_statements": ["Witness confirms Party B drifted"],
+  "legal_considerations": ["Potential liability for Party B"],
+  "recommended_actions": ["Collect CCTV footage"],
+  "extraction_confidence": 0.9,
+  "missing_information": ["Insurance policies"],
+  "data_inconsistencies": [],
+  "raw_ai_response": "MOCK_FIXTURE"
+}

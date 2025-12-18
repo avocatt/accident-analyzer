@@ -88,6 +88,8 @@ npm run dev
 ```
 
 The frontend will be available at `http://localhost:5173`
+ 
+> **Local API tip:** create `frontend/.env.local` (or copy `.env`) with `VITE_BACKEND_URL=http://127.0.0.1:8000` before starting Vite so the dev server proxies `/api` calls to your locally running FastAPI backend. When sharing the UI over your LAN, run `npm run dev -- --host` and keep the backend listening on `0.0.0.0:8000`.
 
 ### 4. Docker Deployment
 
@@ -124,6 +126,15 @@ Services will be available at:
    - View structured analysis in tabs
    - Download HTML or PDF briefing
 5. **New Analysis**: Click "Analyze Another Case" to start over
+
+### Screenshots
+
+![Landing Page](ss/Screenshot%202025-12-18%20at%2023.42.53.png)
+![Upload Form](ss/Screenshot%202025-12-18%20at%2023.46.43.png)
+![Drag-and-Drop Zone](ss/Screenshot%202025-12-18%20at%2023.46.49.png)
+![Analysis Progress](ss/Screenshot%202025-12-18%20at%2023.46.58.png)
+![Results Tabs](ss/Screenshot%202025-12-18%20at%2023.47.01.png)
+![Briefing View](ss/Screenshot%202025-12-18%20at%2023.47.05.png)
 
 ## API Documentation
 

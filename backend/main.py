@@ -5,11 +5,17 @@ from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 from typing import List, Optional
 import os
+import sys
 import shutil
 import tempfile
 from datetime import datetime
 import uuid
 from dotenv import load_dotenv
+
+# Ensure module imports work during local execution/tests
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+if CURRENT_DIR not in sys.path:
+    sys.path.append(CURRENT_DIR)
 
 from services.ai_service import AIService
 from services.document_processor import DocumentProcessor
